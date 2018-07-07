@@ -2,10 +2,39 @@ var express = require("express");
 var router  = express.Router();
 var Campground = require("../models/campground");
 var middleware = require("../middleware");
+var multer = require('multer');
 
+require('dotenv').config();
+var stripe = require("stripe")(process.env.STRIPE_API_SECRET);
+
+
+var storage = multer.diskStorage({
+  filename: function(req, file, callback) {
+    callback(null, Date.now() + file.originalname);
+  }
+});
+
+var imageFilter = function (req, file, cb) {
+    // accept image files only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif|mp4)$/i)) {
+        return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+};
+
+var upload = multer({ storage: storage, fileFilter: imageFilter})
+
+var cloudinary = require('cloudinary');
+cloudinary.config({ 
+  cloud_name: 'werterzz', 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 //INDEX - show all campgrounds
 router.get("/", function(req, res){
+    
+
     // Get all campgrounds from DB
     Campground.find({}, function(err, allCampgrounds){
        if(err){
@@ -16,26 +45,52 @@ router.get("/", function(req, res){
     });
 });
 
+router.post("/charge",function(req,res){
+    console.log('posted')
+
+    var stripeToken = req.body.stripeToken;
+    var charge = stripe.charges.create({
+      amount: 1000, // amount in cents, again
+      currency: "usd",
+      card: stripeToken,
+      description: "payinguser@example.com"
+    }, function(err, charge) {
+      if (err && err.type === 'StripeCardError') {
+        console.log("CARD DECLINED");
+        res.send('error')
+      }
+      else {
+          console.log("CARD ACCEPTED");
+          res.send('ok')
+
+      }
+    });
+});
+
+
 //CREATE - add new campground to DB
-router.post("/", middleware.isLoggedIn, function(req, res){
-    // get data from form and add to campgrounds array
-    var name = req.body.name;
-    var image = req.body.image;
-    var desc = req.body.description;
-    var author = {
+router.post("/", middleware.isLoggedIn, upload.single('image'), function(req, res) {
+    cloudinary.v2.uploader.upload_large(req.file.path, { resource_type: "video" }, function(err, result) {
+      if(err) {
+        req.flash('error', err.message);
+        return res.redirect('back');
+      }
+      // add cloudinary url for the image to the campground object under image property
+      req.body.campground.image = result.secure_url;
+      // add image's public_id to campground object
+      req.body.campground.imageId = result.public_id;
+      // add author to campground
+      req.body.campground.author = {
         id: req.user._id,
         username: req.user.username
-    }
-    var newCampground = {name: name, image: image, description: desc, author:author}
-    // Create a new campground and save to DB
-    Campground.create(newCampground, function(err, newlyCreated){
-        if(err){
-            console.log(err);
-        } else {
-            //redirect back to campgrounds page
-            console.log(newlyCreated);
-            res.redirect("/campgrounds");
+      }
+      Campground.create(req.body.campground, function(err, campground) {
+        if (err) {
+          req.flash('error', err.message);
+          return res.redirect('back');
         }
+        res.redirect('/campgrounds/' + campground.id);
+      });
     });
 });
 
@@ -88,6 +143,7 @@ router.delete("/:id",middleware.checkCampgroundOwnership, function(req, res){
       }
    });
 });
+
 
 
 module.exports = router;

@@ -9,12 +9,15 @@ var express     = require("express"),
     Campground  = require("./models/campground"),
     Comment     = require("./models/comment"),
     User        = require("./models/user"),
+    stripe = require("stripe")("sk_test_ZP6wDUmc935EvdcfHguXO8Bv"),
     seedDB = require("./seeds");
     
 //requiring routes
 var commentRoutes    = require("./routes/comments"),
     campgroundRoutes = require("./routes/campgrounds"),
     indexRoutes = require("./routes/index");
+    
+   
     
 var url = process.env.DATABASEURL || "mongodb://localhost/realEstateWeb";
 mongoose.connect(url);
