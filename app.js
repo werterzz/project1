@@ -19,8 +19,8 @@ var commentRoutes    = require("./routes/comments"),
     
    
 // mongodb://<dbuser>:<dbpassword>@ds219130.mlab.com:19130/real_estate_web    
-// var url = process.env.DATABASEURL || "mongodb://top:t123456@ds219130.mlab.com:19130/real_estate_web";
-var url = process.env.DATABASEURL || "mongodb://localhost/realEstateWeb";
+var url = process.env.DATABASEURL || "mongodb://top:t123456@ds219130.mlab.com:19130/real_estate_web";
+// var url = process.env.DATABASEURL || "mongodb://localhost/realEstateWeb";
 mongoose.connect(url);
 
 app.use(bodyParser.urlencoded({extended: true}));
