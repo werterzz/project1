@@ -70,7 +70,7 @@ router.post("/charge",function(req,res){
 
 //CREATE - add new campground to DB
 router.post("/", middleware.isLoggedIn, upload.single('image'), function(req, res) {
-    cloudinary.v2.uploader.upload_large(req.file.path, { resource_type: "video" }, function(err, result) {
+    cloudinary.v2.uploader.upload(req.file.path, { resource_type: "image" }, function(err, result) {
       if(err) {
         req.flash('error', err.message);
         return res.redirect('back');
